@@ -1,3 +1,4 @@
+"""Safe, metadata-only filesystem scanning."""
 
 import os
 import uuid
@@ -12,6 +13,7 @@ def scan_root(
     catalogue: Catalogue,
     config: dict[str, Any],
 ) -> dict[str, int]:
+    """Scan one directory and synchronize its catalogue records."""
 
     root = Path(root_path).expanduser().resolve(strict=True)
 
@@ -45,7 +47,7 @@ def scan_root(
     ):
         current = Path(current_dir)
 
-        
+        # Prune excluded directories before descending into them.
         retained_dirs = []
 
         for directory in directories:
@@ -55,10 +57,13 @@ def scan_root(
                 stats["skipped"] += 1
                 continue
 
+            if directory.endswith(".egg-info"):
+                continue
+
             if directory in excluded_dirs:
                 continue
 
-        
+            # Never descend through directory symlinks.
             if directory_path.is_symlink():
                 continue
 
@@ -74,7 +79,7 @@ def scan_root(
             path = current / filename
 
             try:
-                
+                # Do not index symlinks or non-regular files.
                 if path.is_symlink():
                     stats["skipped"] += 1
                     continue
@@ -108,6 +113,7 @@ def scan_root(
                     OSError(f"Could not index {path}: {error}")
                 )
 
+    # Never purge stale records after an incomplete scan.
     if errors:
         raise RuntimeError(
             f"Scan of {root} was incomplete: "

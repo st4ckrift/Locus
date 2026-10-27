@@ -1,4 +1,5 @@
 
+"""Command-line interface for Smart File Explorer."""
 
 import argparse
 import sys
@@ -10,15 +11,16 @@ from smartfiles.config import (
     initialize_config,
     load_config,
 )
+from smartfiles.hybrid import HybridSearch
 from smartfiles.scanner import scan_root
+from smartfiles.semantic_index import SemanticIndexer
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         prog="smartfiles",
-        description="Search local files by filename and path.",
+        description="Search local files by name, path, and meaning.",
     )
-
     parser.add_argument(
         "--config",
         type=Path,
@@ -43,7 +45,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     scan_parser = subparsers.add_parser(
         "scan",
-        help="Index files in configured directories.",
+        help="Index file metadata in configured directories.",
     )
     scan_parser.add_argument(
         "--root",
@@ -52,14 +54,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Directory to scan; repeat for multiple directories.",
     )
 
+    index_parser = subparsers.add_parser(
+        "index-content",
+        help="Extract supported text and build the semantic index.",
+    )
+    index_parser.add_argument(
+        "--limit",
+        type=int,
+        default=None,
+        help="Reserved for future incremental/batched indexing.",
+    )
+
     search_parser = subparsers.add_parser(
         "search",
-        help="Search indexed filenames and paths.",
+        help="Search indexed filenames, paths, and content meaning.",
     )
-    search_parser.add_argument(
-        "query",
-        help="Words to search for.",
-    )
+    search_parser.add_argument("query", help="Search query.")
     search_parser.add_argument(
         "--limit",
         type=int,
@@ -67,18 +77,22 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum number of results (1-100).",
     )
 
-    subparsers.add_parser(
-        "stats",
-        help="Show catalogue statistics.",
-    )
-
+    subparsers.add_parser("stats", help="Show catalogue statistics.")
     return parser
+
+
+def _make_semantic_indexer(config, catalogue) -> SemanticIndexer:
+    return SemanticIndexer(
+        catalogue=catalogue,
+        store_path=config["semantic_store_path"],
+        vecna_path=config["vecna_path"],
+        max_content_size_mb=config["max_content_size_mb"],
+    )
 
 
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-
     config_path = args.config.expanduser().resolve()
 
     if args.command == "init":
@@ -86,26 +100,16 @@ def main() -> int:
             config_path,
             force=args.force,
         )
-
         if not created:
             print(f"Configuration already exists: {config_path}")
             print("Use --force only if you intend to replace it.")
             return 0
 
         print(f"Created configuration: {config_path}")
-
         config = load_config(config_path)
         Catalogue(config["database_path"])
-
         print(f"Database: {config['database_path']}")
         print(f"Configured roots: {len(config['roots'])}")
-
-        if not config["roots"]:
-            print(
-                "No default directories were found. "
-                "Edit the configuration or pass --root to scan."
-            )
-
         return 0
 
     if not config_path.is_file():
@@ -122,7 +126,6 @@ def main() -> int:
 
         if args.command == "scan":
             roots = args.root or config["roots"]
-
             if not roots:
                 print(
                     "No scan roots configured. Add roots to "
@@ -132,7 +135,6 @@ def main() -> int:
                 return 2
 
             exit_code = 0
-
             for root in roots:
                 try:
                     stats = scan_root(root, catalogue, config)
@@ -144,11 +146,29 @@ def main() -> int:
                 print(f"\nScanned: {Path(root).expanduser().resolve()}")
                 for key, value in stats.items():
                     print(f"  {key:10} {value}")
-
             return exit_code
 
+        if args.command == "index-content":
+            indexer = _make_semantic_indexer(config, catalogue)
+            stats = indexer.index_all()
+            print("Semantic indexing complete:")
+            for key, value in stats.items():
+                print(f"  {key:10} {value}")
+            print(f"Vector store: {config['semantic_store_path']}")
+            return 0
+
         if args.command == "search":
-            results = catalogue.search(args.query, args.limit)
+            if not 1 <= args.limit <= 100:
+                parser.error("--limit must be between 1 and 100")
+
+            semantic_indexer = None
+            if catalogue.semantic_documents():
+                semantic_indexer = _make_semantic_indexer(
+                    config, catalogue
+                )
+
+            searcher = HybridSearch(catalogue, semantic_indexer)
+            results = searcher.search(args.query, args.limit)
 
             if not results:
                 print("No matching files found.")
@@ -156,6 +176,7 @@ def main() -> int:
 
             for number, result in enumerate(results, start=1):
                 size_kib = result["size_bytes"] / 1024
+                sources = ", ".join(result["sources"])
 
                 print(f"\n{number}. {result['name']}")
                 print(f"   Path: {result['path']}")
@@ -163,20 +184,28 @@ def main() -> int:
                     f"   Type: {result['extension'] or '(no extension)'}"
                     f" | Size: {size_kib:.1f} KiB"
                 )
-
+                print(
+                    f"   Sources: {sources}"
+                    f" | RRF: {result['rrf_score']:.5f}"
+                )
+                if "semantic_distance" in result:
+                    print(
+                        "   Semantic distance: "
+                        f"{result['semantic_distance']:.4f}"
+                    )
             return 0
 
         if args.command == "stats":
             stats = catalogue.stats()
-
             print(f"Indexed files: {stats['file_count']}")
             print(f"File extensions: {stats['extension_count']}")
             print(f"Total indexed size: {stats['total_bytes']:,} bytes")
-
+            print(f"Semantic documents: {stats['semantic_count']}")
             return 0
 
-    except (OSError, ValueError, RuntimeError) as error:
+    except (OSError, ValueError, RuntimeError, ImportError) as error:
         print(f"ERROR: {error}", file=sys.stderr)
         return 1
 
     return 0
+
