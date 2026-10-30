@@ -3,10 +3,10 @@ import json
 from pathlib import Path
 from types import SimpleNamespace
 
-from smartfiles.catalogue import Catalogue
-from smartfiles.hybrid import HybridSearch
-from smartfiles.scanner import scan_root
-from smartfiles.semantic_index import SemanticIndexer
+from locus.catalogue import Catalogue
+from locus.hybrid import HybridSearch
+from locus.scanner import scan_root
+from locus.semantic_index import SemanticIndexer
 
 
 class FakeEmbedder:

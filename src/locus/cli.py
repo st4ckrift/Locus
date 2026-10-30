@@ -1,24 +1,24 @@
 
-"""Command-line interface for Smart File Explorer."""
+"""Command-line interface for Locus."""
 
 import argparse
 import sys
 from pathlib import Path
 
-from smartfiles.catalogue import Catalogue
-from smartfiles.config import (
+from locus.catalogue import Catalogue
+from locus.config import (
     default_config_path,
     initialize_config,
     load_config,
 )
-from smartfiles.hybrid import HybridSearch
-from smartfiles.scanner import scan_root
-from smartfiles.semantic_index import SemanticIndexer
+from locus.hybrid import HybridSearch
+from locus.scanner import scan_root
+from locus.semantic_index import SemanticIndexer
 
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="smartfiles",
+        prog="locus",
         description="Search local files by name, path, and meaning.",
     )
     parser.add_argument(
@@ -115,7 +115,7 @@ def main() -> int:
     if not config_path.is_file():
         print(
             f"Configuration not found: {config_path}\n"
-            "Run: smartfiles init",
+            "Run: locus init",
             file=sys.stderr,
         )
         return 2

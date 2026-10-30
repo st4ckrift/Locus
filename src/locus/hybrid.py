@@ -3,7 +3,7 @@
 
 from typing import Any
 
-from smartfiles.catalogue import Catalogue
+from locus.catalogue import Catalogue
 
 
 class HybridSearch:

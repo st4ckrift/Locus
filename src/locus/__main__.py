@@ -1,5 +1,5 @@
 
-from smartfiles.cli import main
+from locus.cli import main
 
 if __name__ == "__main__":
     raise SystemExit(main())

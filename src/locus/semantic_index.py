@@ -5,9 +5,9 @@ import hashlib
 from pathlib import Path
 from typing import Any
 
-from smartfiles.catalogue import Catalogue
-from smartfiles.extractor import extract_text
-from smartfiles.vecna_adapter import create_engine
+from locus.catalogue import Catalogue
+from locus.extractor import extract_text
+from locus.vecna_adapter import create_engine
 
 
 class SemanticIndexer:

@@ -5,7 +5,7 @@ import uuid
 from pathlib import Path
 from typing import Any
 
-from smartfiles.catalogue import Catalogue
+from locus.catalogue import Catalogue
 
 
 def scan_root(

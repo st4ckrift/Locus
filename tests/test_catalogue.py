@@ -1,7 +1,7 @@
 from pathlib import Path
 
-from smartfiles.catalogue import Catalogue
-from smartfiles.scanner import scan_root
+from locus.catalogue import Catalogue
+from locus.scanner import scan_root
 
 
 def make_config() -> dict:

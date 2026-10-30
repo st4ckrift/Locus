@@ -18,7 +18,7 @@ def default_config() -> dict[str, Any]:
     ]
 
     roots = [str(path) for path in candidate_roots if path.is_dir()]
-    data_dir = home / ".local" / "share" / "smart-file-explorer"
+    data_dir = home / ".local" / "share" / "locus"
 
     return {
         "roots": roots,
@@ -46,7 +46,7 @@ def default_config_path() -> Path:
     return (
         Path.home()
         / ".config"
-        / "smart-file-explorer"
+        / "locus"
         / "config.json"
     )
 
