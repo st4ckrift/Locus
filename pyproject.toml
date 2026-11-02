@@ -26,6 +26,7 @@ api = [
 
 [project.scripts]
 locus = "locus.cli:main"
+locusd = "locus.api:main"
 
 [tool.setuptools.packages.find]
 where = ["src"]
