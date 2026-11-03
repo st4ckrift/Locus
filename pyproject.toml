@@ -27,6 +27,7 @@ api = [
 [project.scripts]
 locus = "locus.cli:main"
 locusd = "locus.api:main"
+locus-search = "locus.search_ui:open_search_window"
 
 [tool.setuptools.packages.find]
 where = ["src"]
