@@ -4,6 +4,7 @@
 import argparse
 import sys
 from pathlib import Path
+from locus.settings import open_settings
 
 from locus.catalogue import Catalogue
 from locus.config import (
@@ -78,7 +79,13 @@ def build_parser() -> argparse.ArgumentParser:
     )
 
     subparsers.add_parser("stats", help="Show catalogue statistics.")
-    return parser
+
+    subparsers.add_parser(
+        "settings",
+        help="Open the graphical Locus settings window.",
+    )
+
+    return parser 
 
 
 def _make_semantic_indexer(config, catalogue) -> SemanticIndexer:
@@ -122,6 +129,11 @@ def main() -> int:
 
     try:
         config = load_config(config_path)
+
+        if args.command == "settings":
+            open_settings(config_path)
+            return 0
+
         catalogue = Catalogue(config["database_path"])
 
         if args.command == "scan":
